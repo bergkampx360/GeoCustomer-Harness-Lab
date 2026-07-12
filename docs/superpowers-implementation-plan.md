@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 1 completed.
-- **Milestones completed:** 1 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 2.
+- **Status:** Milestone 2 completed.
+- **Milestones completed:** 2 / 9.
+- **Next action:** awaiting explicit approval to start Milestone 3.
 
 ## Context
 
@@ -95,18 +95,23 @@ model Customer {
 
 ### Milestone 2 — Add docker-compose Postgres and env templates
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** A local, disposable Postgres instance is available via Docker Compose, with env templates in place.
 - **Tasks:**
-  - Add `docker-compose.yml` defining a single Postgres service (default port `5432`, configurable).
-  - Add `.env.example` documenting `DATABASE_URL` (and any other required vars).
-  - Add local `.env` (git-ignored) with matching values.
+  - Add `docker-compose.yml` defining a single Postgres service (default port `5432`, configurable). ✅
+  - Add `.env.example` documenting `DATABASE_URL` (and any other required vars). ✅
+  - Add local `.env` (git-ignored) with matching values. ✅
 - **Verification:**
-  - `docker compose up -d` starts Postgres and it reports healthy.
-  - `docker compose ps` shows the service running.
+  - `docker compose config` validates. ✅
+  - `docker compose up -d` starts Postgres. ✅
+  - Container reports healthy via `docker inspect --format='{{.State.Health.Status}}'` → `healthy`. ✅
+  - `docker compose ps` shows the service `Up ... (healthy)` on `0.0.0.0:5432->5432/tcp`. ✅
+  - `.env` confirmed git-ignored via `git check-ignore -v .env`; `.env.example` confirmed untracked-but-not-ignored. ✅
 - **Planned commit message:** `chore: add docker-compose postgres and env templates`
-- **Actual commit hash:** _pending_
-- **Deviations:** _none yet_
+- **Actual commit hash:** `_recorded after commit — see report_`
+- **Deviations:**
+  - Added a named Docker volume (`postgres-data`) for data persistence across container restarts. Not explicitly requested in the plan, but standard for a local Postgres dev instance and not disallowed by the technical constraints (which only rule out cloud/orchestration infrastructure, not a local volume).
+  - `POSTGRES_PORT` was added as its own env var (defaulting to `5432`) separately from `DATABASE_URL`, so the compose file's host port mapping and Prisma's future connection string both derive from the same configurable value without duplicating a hardcoded port in two places.
 
 ### Milestone 3 — Configure Postgres MCP for local development
 
