@@ -29,6 +29,13 @@
       "options": {
         "command": "prisma migrate dev --schema=apps/api/prisma/schema.prisma"
       }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run",
+        "cwd": "apps/api"
+      }
     }
   }
 }

@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 5 completed.
-- **Milestones completed:** 5 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 6.
+- **Status:** Milestone 6 completed.
+- **Milestones completed:** 6 / 9.
+- **Next action:** awaiting explicit approval to start Milestone 7.
 
 ## Context
 
@@ -224,22 +224,36 @@ model Customer {
 
 ### Milestone 6 — Add geo module with full unit tests
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** All pure geo logic (Haversine distance, town normalization, reference lookup, sorting) exists and is fully unit-tested, independent of the database.
+- **Coordinate reference source/rationale:** all 15 city-center coordinates in `geo/town-reference.ts` are well-known, standard geographic coordinates for each city's center (the same values commonly cited in general geographic references), covering exactly the 15 cities present in `data/seed-customers.json` (Budapest, Vienna, Munich, Milan, Barcelona, Lyon, Kraków, Prague, Lisbon, Amsterdam, Stockholm, Ljubljana, Bucharest, Dublin, Copenhagen) — no external geocoding call, no network access. Cross-checked internally: computing the Budapest→Vienna Haversine distance from these exact values yields ≈214.05 km, matching the spec's "approximately 214 km" expectation exactly.
 - **Tasks:**
-  - `geo/haversine.ts` — Haversine formula.
-  - `geo/distance-from-budapest.ts` — null-safe wrapper returning raw, unrounded km.
-  - `geo/name-collator.ts` — shared `Intl.Collator('en', { sensitivity: 'base' })`.
-  - `geo/sort-by-distance.ts` — sorts by raw distance, nulls last, collator tie-break; returns unrounded `distanceKm`.
-  - `geo/normalize-town.ts` — NFD diacritic stripping, lowercase, trim.
-  - `geo/town-reference.ts` — bundled `telepules -> {lat, lon}` map for the 15 seed cities.
-  - `geo/geocode.ts` — normalize + reference lookup; logs and returns `null` on miss, never throws.
-  - Tests: `haversine.spec.ts` (Budapest↔Vienna ≈214 km, zero-distance), `distance-from-budapest.spec.ts` (null handling), `normalize-town.spec.ts` (trim/case/diacritics), `geocode.spec.ts` (known city + synthetic unknown city), `sort-by-distance.spec.ts` (nulls last, deterministic tie-break, raw-vs-rounded ordering using a constructed `9.96`/`10.04` tie-at-rounded-value case).
+  - `geo/haversine.ts` — Haversine formula, pure, raw unrounded km. ✅
+  - `geo/distance-from-budapest.ts` — null-safe wrapper returning raw, unrounded km. ✅
+  - `geo/name-collator.ts` — shared `Intl.Collator('en', { sensitivity: 'base' })`. ✅
+  - `geo/sort-by-distance.ts` — sorts by raw distance, nulls last, collator tie-break; returns unrounded `distanceKm`. ✅
+  - `geo/normalize-town.ts` — NFD diacritic stripping (via `\p{M}` Unicode property escape), lowercase, trim. ✅
+  - `geo/town-reference.ts` — bundled `telepules -> {lat, lon}` map for the 15 seed cities, keyed by normalized name. ✅
+  - `geo/geocode.ts` — normalize + reference lookup; logs (`console.warn`) and returns `null` on miss, never throws. ✅
+- **Test coverage added** (5 files, 16 tests, all passing):
+  - `haversine.spec.ts` (2): Budapest↔Vienna ≈214 km (bounded 210–218), Budapest↔Budapest = 0.
+  - `distance-from-budapest.spec.ts` (5): null lat, null lon, both null, Budapest-itself = 0, raw (not pre-rounded) value for a known city.
+  - `normalize-town.spec.ts` (4): trim, case-insensitivity, diacritic-insensitivity, combined trim+case+diacritic equivalence.
+  - `geocode.spec.ts` (2): known city resolves (case/whitespace/diacritic-insensitive), unknown city → `null` + `console.warn` called + does not throw.
+  - `sort-by-distance.spec.ts` (3): nulls sorted last, deterministic name tie-break at equal (zero) distance, raw-distance ordering preserved even when two raw distances (`~9.96`/`~10.04` km) round to the identical displayed value (`10.0` km) — names chosen so naive round-then-sort would produce the wrong order.
+- **Nx targets added:** `test` (`nx:run-commands` wrapping `vitest run`, `cwd: apps/api`) — the only new target; no separate spec-typecheck target added (kept minimal per instruction).
 - **Verification:**
-  - `nx run api:test` passes, all listed test files present and green.
+  - `nx show projects` → `["api"]`; `nx show project api` → confirms the `test` target is registered. ✅ (Nx project discovery)
+  - `nx run api:typecheck` → passes. ✅ (API typecheck, unaffected by the new geo module)
+  - `nx run api:test` → **5 test files passed (5), 16 tests passed (16)**. ✅
+  - `grep` over `apps/api/src/geo/*.ts` (excluding specs) for `prisma|fastify|process.env|fs`-style imports → no matches, confirming the module has no Prisma/Postgres/Fastify/env-var/filesystem dependency. ✅
+  - `apps/api/src/main.ts` confirmed byte-for-byte unchanged (`git diff` empty); no `seed/` or `routes/` directories exist. ✅
 - **Planned commit message:** `feat(geo): add haversine, normalization, geocode, distance-from-budapest and sort-by-distance with full unit tests`
-- **Actual commit hash:** _pending_
-- **Deviations:** _none yet_
+- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Deviations:**
+  - `geo/normalize-town.ts` uses the Unicode property escape `/\p{M}/gu` (matches any combining "Mark" character after NFD decomposition) rather than a hand-written `̀-ͯ` code-point range as originally implied — functionally equivalent and broader/more robust, and avoided an authoring issue where literal combining-mark characters kept being embedded directly in the source instead of an escape sequence.
+  - Added `apps/api/tsconfig.spec.json`, deferred from Milestone 4 specifically until test files existed — created now since Vitest and the first spec files arrived this milestone, as anticipated at the time.
+  - No other deviations: dependencies added were exactly `vitest` (apps/api dev dependency, only new package); no Prisma Client runtime usage, seed logic, customer routes, endpoint tests, or database integration tests were added.
 
 ### Milestone 7 — Add idempotent seed script
 
