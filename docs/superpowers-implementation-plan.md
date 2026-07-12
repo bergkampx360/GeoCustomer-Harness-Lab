@@ -2,7 +2,7 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 3 completed (live in-session MCP tool verification pending a session restart — see Milestone 3 deviations).
+- **Status:** Milestone 3 completed, including native in-session MCP tool verification (see Milestone 3 verification/deviations).
 - **Milestones completed:** 3 / 9.
 - **Next action:** awaiting explicit approval to start Milestone 4.
 
@@ -134,13 +134,20 @@ model Customer {
     - `list_schemas({})` → `information_schema`, `pg_catalog`, `pg_toast` (system), `public` (user schema, owner `pg_database_owner`) — **current schema state confirmed**.
     - `list_objects({"schema_name": "public", "object_type": "table"})` → `[]` — **confirmed no application tables exist yet**.
 - **Planned commit message:** `chore: configure Postgres MCP for local development`
-- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Actual commit hash:** `d8ba31137731be5f7ed46f0121d9a7e509d60980`
 - **Deviations:**
   - Used the Docker image (`crystaldba/postgres-mcp`) rather than the project's primary-documented `uvx postgres-mcp` invocation, since `uv`/Python MCP tooling isn't installed in this environment and Docker is already a hard project dependency — avoids adding a new toolchain for one dev tool.
   - Added `scripts/mcp-postgres.sh`, not called out explicitly in the original plan, as the mechanism satisfying "reproducible way for the MCP process to receive DATABASE_URL" without assuming Claude Code auto-loads `.env`.
   - `.mcp.json` does not use `${DATABASE_URL}` env-var expansion as originally sketched in the plan (Approved Architecture Decisions #6) — Claude Code's own `.mcp.json` variable expansion pulls from the parent process's environment, not from a project `.env` file, so a literal `${DATABASE_URL}` there would have been silently empty. The wrapper script approach was chosen instead and is the more explicit, verifiable mechanism; the underlying goal (no committed secrets, reproducible local wiring) is unchanged.
-  - **Live in-session MCP tool verification could not be performed this turn** — Claude Code loads project-scoped `.mcp.json` servers at session start, and this session was already running when the file was created. The equivalent verification was performed by manually driving the same Docker container over the MCP stdio protocol (see Verification above), which exercises identical code paths (same image, same connection string, same tool implementations) but is not literally "the Claude Code session using its MCP tool." A session restart/reconnect is needed before the `postgres` MCP server's tools appear via the normal in-session tool interface; recommended before relying on it for Milestones 5/7 schema and seed-data inspection.
-- **Deviations:** _none yet_
+  - **Live in-session MCP tool verification could not be performed in the same turn the config was created** — Claude Code loads project-scoped `.mcp.json` servers at session start, and that session was already running when the file was created. The equivalent verification was performed by manually driving the same Docker container over the MCP stdio protocol (see Verification above), which exercises identical code paths (same image, same connection string, same tool implementations) but was not literally "the Claude Code session using its MCP tool."
+  - **Native MCP integration verification: Completed.** A fresh Claude Code session subsequently loaded the project-scoped `postgres` MCP server successfully (its tools appeared as available `mcp__postgres__*` tools with no manual setup). The following native tools were then invoked directly in-session: `mcp__postgres__execute_sql`, `mcp__postgres__list_schemas`, `mcp__postgres__list_objects`. Verified results:
+    - `current_database`: `geocustomer`
+    - `current_user`: `geocustomer`
+    - PostgreSQL version: `16.14`
+    - Schemas: `information_schema`, `pg_catalog`, `pg_toast`, `public`
+    - Tables in `public`: none
+    
+    These match the earlier manual stdio verification exactly, confirming the `.mcp.json` + wrapper-script configuration is correct end-to-end via the actual Claude Code MCP client, not just the underlying container.
 
 ### Milestone 4 — Add Fastify app skeleton
 
