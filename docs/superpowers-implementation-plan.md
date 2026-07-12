@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 7 completed.
-- **Milestones completed:** 7 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 8.
+- **Status:** Milestone 8 completed.
+- **Milestones completed:** 8 / 9.
+- **Next action:** awaiting explicit approval to start Milestone 9.
 
 ## Context
 
@@ -287,20 +287,40 @@ model Customer {
 
 ### Milestone 8 — Implement customers/count and customers/by-distance endpoints
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** Both required endpoints are implemented and wired into the Fastify app, matching the acceptance criteria exactly.
+- **Route design:** `apps/api/src/routes/customers.ts` exports `customerRoutes` (a Fastify plugin function registering both GETs) plus a small **pure, database-independent** helper, `buildByDistanceResponse`, which takes already-fetched customer rows and returns the sorted+rounded response array. The route handler itself is thin: `prisma.customer.findMany()` then delegate to `buildByDistanceResponse`. This split is what makes response rounding/shape testable without a database (see Tests).
+- **Response shape:**
+  - `GET /customers/count` → `{ "count": <prisma.customer.count()> }`.
+  - `GET /customers/by-distance` → array of full stored customer fields (`id, name, telepules, countryCode, lat, lon, budget, note`) plus `distanceKm`, sorted via `sortByDistanceFromBudapest` (raw distance, nulls last, collator tie-break) with `distanceKm` rounded to one decimal **only** inside `buildByDistanceResponse` (never inside the geo module).
+- **Prisma lifecycle:** the existing singleton `prisma` (from `prisma-client.ts`, Milestone 7) is reused as-is — no new `PrismaClient` per request or per route. `main.ts` now also handles `SIGINT`/`SIGTERM`: closes the Fastify app, awaits `prisma.$disconnect()`, then exits 0 (or logs and exits 1 on failure); the `.listen()` rejection path also disconnects Prisma before exiting 1.
+- **Tests added** (`apps/api/src/routes/customers.spec.ts`, 3 tests, database-independent — exercise `buildByDistanceResponse` directly with fixture rows, no Fastify/Prisma/DB involved):
+  - response rounding: raw ~214.05 km renders as exactly one decimal in the response, sort order unaffected.
+  - unknown-coordinate customers: `distanceKm: null`, sorted last.
+  - response shape: all original stored fields preserved alongside `distanceKm`.
+  - Deliberately did **not** test `customerRoutes`/the Fastify wiring or `/customers/count` directly, per "do not over-engineer route testing" — that would require either a real DB or heavy mocking for very little additional confidence beyond the pure-function tests plus the manual `curl` verification below.
 - **Tasks:**
-  - `routes/customers.ts`: `GET /customers/count` via `prisma.customer.count()`.
-  - `routes/customers.ts`: `GET /customers/by-distance` — fetch all customers, call `sortByDistanceFromBudapest`, map to response rounding `distanceKm` to 1 decimal only at this step.
-  - Wire routes into `main.ts`.
+  - `routes/customers.ts`: `GET /customers/count` via `prisma.customer.count()`. ✅
+  - `routes/customers.ts`: `GET /customers/by-distance` — fetch all customers, call `sortByDistanceFromBudapest`, map to response rounding `distanceKm` to 1 decimal only at this step. ✅
+  - Wire routes into `main.ts`. ✅ (plus added shutdown handling, since Prisma is now actually used at runtime — see Deviations)
 - **Verification:**
-  - Manual `curl` against both endpoints on the seeded DB.
-  - `GET /customers/count` returns `{"count":15}`.
-  - `GET /customers/by-distance` returns Budapest customer(s) first at `0`, ascending order, each `distanceKm` rounded to 1 decimal.
-  - Cross-check returned rows against the database via Postgres MCP.
+  - `nx run api:typecheck` → passes. ✅
+  - `nx run api:test` → **6 test files passed (6), 19 tests passed (19)** (16 existing + 3 new). ✅
+  - `nx run api:serve` → booted; manual `curl`:
+    - `GET /customers/count` → `{"count":15}`. ✅
+    - `GET /customers/by-distance` → Anna Kovács (Budapest) first, `distanceKm: 0`; all 15 customers returned; distances strictly non-decreasing (`0, 214, 293, 380.6, ..., 2469.4`); every `distanceKm` rounded to exactly one decimal (programmatically verified: `all(round(d,1)==d for d in dists)` → `True`); no null distances (all 15 seed cities resolve). ✅
+    - `POST /customers/count`, `GET /health`, `DELETE /customers/by-distance` → all `404` — no unsupported routes exist. ✅
+    - `SIGINT` sent to the running server → log shows `"received SIGINT, shutting down"`, process exited cleanly (`process.exit(0)`, confirmed via `kill -0`); Nx reported the target as successfully completed. ✅ clean shutdown
+  - **Native Postgres MCP verification** (`mcp__postgres__execute_sql`), taken immediately after the curl checks:
+    - `select count(*) from "Customer"` → `15` — unchanged from Milestone 7's post-seed state. ✅
+    - Sample rows (Anna Kovács, Lena Fischer, Katarzyna Nowak) queried directly from Postgres match the `curl` response byte-for-byte (`telepules`/`countryCode`/`lat`/`lon`/`budget`). ✅
+    - No mutation: row count still exactly 15, sample values unchanged from the original seed, and `grep` over `routes/customers.ts` confirms only `prisma.customer.count()` and `prisma.customer.findMany()` are called — no write methods anywhere in the routes module. ✅
 - **Planned commit message:** `feat(api): implement customers/count and customers/by-distance endpoints`
-- **Actual commit hash:** _pending_
-- **Deviations:** _none yet_
+- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Deviations:**
+  - Added `apps/api/src/routes/customers.spec.ts` (not explicitly named in the original plan) to satisfy the instruction to test response rounding/shape without over-engineering — a natural consequence of extracting `buildByDistanceResponse` as a pure function.
+  - Added `SIGINT`/`SIGTERM` shutdown handling to `main.ts`, not present before this milestone: it wasn't needed while Prisma was unused by the HTTP server, but is now required so the server disconnects Prisma cleanly instead of relying on the OS to kill the connection.
+  - No other deviations: exactly the two required GET routes exist (verified via curl returning 404 for `POST`, `GET /health`, `DELETE`), no seed logic was added to the server, and the existing Prisma Client singleton was reused without modification.
 
 ### Milestone 9 — Add README and finalize env example
 
