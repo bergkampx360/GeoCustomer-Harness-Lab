@@ -17,6 +17,18 @@
         "command": "tsc --noEmit -p tsconfig.app.json",
         "cwd": "apps/api"
       }
+    },
+    "prisma-generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma generate --schema=apps/api/prisma/schema.prisma"
+      }
+    },
+    "migrate-dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma migrate dev --schema=apps/api/prisma/schema.prisma"
+      }
     }
   }
 }

@@ -1,0 +1,21 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Customer {
+  id          Int     @id @default(autoincrement())
+  name        String
+  telepules   String
+  countryCode String
+  lat         Float?
+  lon         Float?
+  budget      Int?
+  note        String?
+
+  @@unique([name, telepules, countryCode], name: "naturalKey", map: "naturalKey")
+}

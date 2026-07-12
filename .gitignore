@@ -7,3 +7,6 @@ tmp/
 .env
 .env.*
 !.env.example
+
+# Generated Prisma Client (regenerate via `nx run api:prisma-generate`)
+apps/api/src/generated/

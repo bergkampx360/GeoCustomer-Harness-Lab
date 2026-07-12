@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 4 completed.
-- **Milestones completed:** 4 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 5.
+- **Status:** Milestone 5 completed.
+- **Milestones completed:** 5 / 9.
+- **Next action:** awaiting explicit approval to start Milestone 6.
 
 ## Context
 
@@ -36,9 +36,11 @@ model Customer {
   budget      Int?
   note        String?
 
-  @@unique([name, telepules, countryCode], name: "naturalKey")
+  @@unique([name, telepules, countryCode], name: "naturalKey", map: "naturalKey")
 }
 ```
+
+`map: "naturalKey"` was added during Milestone 5 implementation so the underlying Postgres constraint itself is named `naturalKey`, not just the Prisma Client API field — see Milestone 5 for details.
 
 ## Acceptance Criteria
 
@@ -174,18 +176,51 @@ model Customer {
 
 ### Milestone 5 — Add Prisma schema with composite natural key and initial migration
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** The `Customer` model (with composite `(name, telepules, countryCode)` unique key) exists in Postgres via a Prisma migration.
+- **Versions:** `prisma` CLI and `@prisma/client` both `7.8.0`. Migration name: `20260712195509_init`.
 - **Tasks:**
-  - Add `apps/api/prisma/schema.prisma` with the `Customer` model shown above.
-  - Run the initial `prisma migrate dev` migration.
-  - Add `migrate`/`generate` Nx targets.
+  - Add `apps/api/prisma/schema.prisma` with the `Customer` model. ✅ (final field set: `id, name, telepules, countryCode, lat, lon, budget, note` — no timestamps or other fields added, per instruction to keep the schema intentionally small.)
+  - Run the initial `prisma migrate dev` migration. ✅ — `20260712195509_init`.
+  - Add `prisma-generate`/`migrate-dev` Nx targets. ✅
+- **Prisma model and constraint definition:**
+  ```prisma
+  model Customer {
+    id          Int     @id @default(autoincrement())
+    name        String
+    telepules   String
+    countryCode String
+    lat         Float?
+    lon         Float?
+    budget      Int?
+    note        String?
+
+    @@unique([name, telepules, countryCode], name: "naturalKey", map: "naturalKey")
+  }
+  ```
+  Both `name:` (Prisma Client API field name, used later for `where: { naturalKey: {...} } }`) and `map:` (actual Postgres constraint/index name) are set to `naturalKey` — see Deviations for why `map` was added.
+- **Nx targets added:** `prisma-generate` (`prisma generate --schema=apps/api/prisma/schema.prisma`) and `migrate-dev` (`prisma migrate dev --schema=apps/api/prisma/schema.prisma`), both run with the default (workspace-root) `cwd` — required so Prisma's own `.env` discovery (`./.env`) finds the root `.env`. Both targets rely on **Nx's built-in `.env` auto-loading**; invoking the underlying `prisma` command directly via `pnpm exec` does *not* auto-load `.env` (confirmed empirically), so the Nx targets are the documented, reproducible entry point for these commands, not the bare CLI.
 - **Verification:**
-  - Migration applies cleanly.
-  - Via Postgres MCP: confirm the `Customer` table, its columns, and the `naturalKey` unique constraint exist.
+  - `pnpm exec prisma validate` (with `.env` sourced) → schema valid. ✅ (Prisma schema validation)
+  - `nx run api:prisma-generate` → Prisma Client generated to `apps/api/src/generated/prisma` (git-ignored — regenerable build output, see Deviations). ✅ (Prisma client generation)
+  - `nx run api:migrate-dev -- --name init` → migration `20260712195509_init` created and applied; `Your database is now in sync with your schema.` ✅ (migration application)
+  - `nx run api:typecheck` → passes with the generated client present in `src/`, unused by app code. ✅ (existing API typecheck)
+  - **Native Postgres MCP verification** (`mcp__postgres__list_objects`, `mcp__postgres__get_object_details`, `mcp__postgres__execute_sql`):
+    - `list_objects(schema_name="public", object_type="table")` → `Customer`, `_prisma_migrations` (Prisma's own bookkeeping table — expected). ✅ table exists
+    - `get_object_details(schema_name="public", object_name="Customer")` → columns `id:integer NOT NULL`, `name:text NOT NULL`, `telepules:text NOT NULL`, `countryCode:text NOT NULL`, `lat:double precision NULL`, `lon:double precision NULL`, `budget:integer NULL`, `note:text NULL` — matches the required fields and nullability exactly. ✅
+    - Same call → `constraints: [{"name": "Customer_pkey", "type": "PRIMARY KEY", "columns": ["id"]}]`. ✅ primary key exists
+    - Same call → `indexes: [..., {"name": "naturalKey", "definition": "CREATE UNIQUE INDEX \"naturalKey\" ON public.\"Customer\" USING btree (name, telepules, \"countryCode\")"}]`. ✅ named `naturalKey` composite unique constraint exists
+    - `execute_sql("select count(*) from \"Customer\";")` → `count: 0`. ✅ no customer rows exist yet
+    - (One `list_objects` call transiently errored — "terminating connection due to administrator command" — immediately after the Postgres container was recreated mid-session; a retry succeeded cleanly. Noted, not a configuration defect.)
 - **Planned commit message:** `feat(db): add Prisma schema with composite natural key and initial migration`
-- **Actual commit hash:** _pending_
-- **Deviations:** _none yet_
+- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Deviations:**
+  - **Prisma 7 requires `prisma.config.ts`**: the plan assumed `datasource db { url = env("DATABASE_URL") }` in `schema.prisma` (as in earlier Prisma versions), but Prisma 7.8.0 rejects `url` in the schema file (`P1012`, "no longer supported... Move connection URLs for Migrate to `prisma.config.ts`"). Added a root `prisma.config.ts` (`defineConfig({ schema: 'apps/api/prisma/schema.prisma', datasource: { url: env('DATABASE_URL') } })`); `schema.prisma`'s datasource block now only declares `provider = "postgresql"`. Discovered empirically (live CLI error), since fetched documentation had not reflected this change.
+  - **`map: "naturalKey"` added, not just `name: "naturalKey"`**: the first migration attempt (later discarded) showed that `name:` alone only sets the Prisma Client API field name — the actual Postgres constraint defaulted to `Customer_name_telepules_countryCode_key`. Since instruction #10 requires verifying a constraint *literally named* `naturalKey` via MCP, added `map: "naturalKey"` so the database object itself carries that name. The database was reset (`docker compose down -v` + `up -d`, no data existed yet) and the migration regenerated cleanly as `20260712195509_init`.
+  - **`prisma` CLI installed at the workspace root**, not in `apps/api/package.json` as first attempted: pnpm only links workspace-package binaries into that package's own `node_modules/.bin`, but Prisma's `.env` discovery depends on the *invocation* `cwd` being the repo root (where `.env` lives) — so the CLI needed to be resolvable from root. `@prisma/client` (the actual runtime dependency) stays in `apps/api/package.json`.
+  - **`apps/api/src/generated/prisma` (the generated Prisma Client output) is git-ignored**, not committed — it's regenerable build output from `nx run api:prisma-generate`, consistent with how `node_modules`/`dist` are already treated in this repo.
+  - Prisma's preinstall check printed a Node.js version compatibility notice (this environment runs Node v26.4.0; the notice lists 20.19+/22.12+/24.0+) but every subsequent Prisma command (validate, generate, migrate) worked correctly — treated as an informational notice, not a blocker.
+  - No app code changes: `apps/api/src/main.ts` is untouched, confirming Prisma Client usage, seed logic, customer routes, and geo logic were not implemented this milestone, as instructed.
 
 ### Milestone 6 — Add geo module with full unit tests
 
