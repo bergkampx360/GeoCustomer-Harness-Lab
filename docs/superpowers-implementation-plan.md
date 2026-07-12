@@ -86,12 +86,12 @@ model Customer {
   - `strict: true` confirmed via `tsc --showConfig -p tsconfig.base.json`. ✅
   - `node_modules/` and `.nx/workspace-data/` confirmed git-ignored via `git check-ignore` / `git status --ignored`. ✅
 - **Planned commit message:** `chore: scaffold Nx pnpm workspace`
-- **Actual commit hash:** _recorded in a follow-up documentation commit (hash not knowable before this commit is created — see Deviations)_
+- **Actual commit hash:** `787fb3b`
 - **Deviations:**
   - Hand-authored `nx.json`, `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`/`tsconfig.json` directly instead of running `create-nx-workspace` interactively, to avoid generator-added scaffolding (e.g. sample apps, unrequested plugins) and to keep exact control over which two dependencies (`nx`, `typescript`) get installed, consistent with the "avoid unnecessary packages/layers" constraint and the plan's flagged "Nx generator bloat" risk.
   - Added `tsconfig.json` (extends `tsconfig.base.json`, empty `references`) alongside `tsconfig.base.json` — standard Nx root convention, not separately called out in the original plan but needed for the base config to be a valid root project reference target once apps are added later.
   - pnpm required an explicit build-script approval for `nx`'s postinstall step; approved via `pnpm-workspace.yaml`'s `allowBuilds: { nx: true }` (pnpm's own supply-chain confirmation mechanism, not a new dependency).
-  - This milestone's plan-document update (marking Completed, recording deviations) is included in this same commit per "include the plan update in the same milestone commit where practical." The **actual commit hash** cannot be included in that same commit without knowing it in advance; per the plan's own update rule, it will be recorded in an immediately following focused documentation commit once known.
+  - This milestone's plan-document update (marking Completed, recording deviations) is included in the `chore: scaffold Nx pnpm workspace` commit. The **actual commit hash** could not be included in that same commit without knowing it in advance, so it was recorded in an immediately following focused documentation commit (`docs: record Milestone 1 commit hash`), per the plan's own update rule.
 
 ### Milestone 2 — Add docker-compose Postgres and env templates
 
