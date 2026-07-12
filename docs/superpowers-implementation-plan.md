@@ -316,7 +316,7 @@ model Customer {
     - Sample rows (Anna Kovács, Lena Fischer, Katarzyna Nowak) queried directly from Postgres match the `curl` response byte-for-byte (`telepules`/`countryCode`/`lat`/`lon`/`budget`). ✅
     - No mutation: row count still exactly 15, sample values unchanged from the original seed, and `grep` over `routes/customers.ts` confirms only `prisma.customer.count()` and `prisma.customer.findMany()` are called — no write methods anywhere in the routes module. ✅
 - **Planned commit message:** `feat(api): implement customers/count and customers/by-distance endpoints`
-- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Actual commit hash:** `d0ab8cd36d000f6ed77bb4bfb541d2e881001c10`
 - **Deviations:**
   - Added `apps/api/src/routes/customers.spec.ts` (not explicitly named in the original plan) to satisfy the instruction to test response rounding/shape without over-engineering — a natural consequence of extracting `buildByDistanceResponse` as a pure function.
   - Added `SIGINT`/`SIGTERM` shutdown handling to `main.ts`, not present before this milestone: it wasn't needed while Prisma was unused by the HTTP server, but is now required so the server disconnects Prisma cleanly instead of relying on the OS to kill the connection.
