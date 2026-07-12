@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 3 completed, including native in-session MCP tool verification (see Milestone 3 verification/deviations).
-- **Milestones completed:** 3 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 4.
+- **Status:** Milestone 4 completed.
+- **Milestones completed:** 4 / 9.
+- **Next action:** awaiting explicit approval to start Milestone 5.
 
 ## Context
 
@@ -151,17 +151,26 @@ model Customer {
 
 ### Milestone 4 — Add Fastify app skeleton
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** A bootable Fastify server exists inside the Nx workspace, with no routes or DB wiring yet.
 - **Tasks:**
-  - Hand-author `apps/api/project.json`, `tsconfig.app.json`, `tsconfig.spec.json`, `package.json`.
-  - Add minimal `apps/api/src/main.ts` that boots a Fastify instance and listens on a configurable port.
-  - Add `serve` Nx target (`nx:run-commands` wrapping `tsx`).
+  - Hand-author `apps/api/project.json`, `tsconfig.app.json`, `package.json`. ✅ (`tsconfig.spec.json` deferred — see Deviations)
+  - Add minimal `apps/api/src/main.ts` that boots a Fastify instance and listens on a configurable port. ✅
+  - Add `serve` Nx target (`nx:run-commands` wrapping `tsx`). ✅ — plus a `typecheck` target (`nx:run-commands` wrapping `tsc --noEmit`), needed to satisfy "TypeScript compilation succeeds" as an explicit, independently runnable verification step.
+- **Dependencies added** (in `apps/api/package.json`, the only new dependencies this milestone): `fastify@^5.10.0` (runtime), `tsx@^4.23.0` and `@types/node@^26.1.1` (dev, to run/typecheck TS directly with no build step).
+- **Environment variables:** `HOST` (default `127.0.0.1` — local-only by default, matching the project's no-auth/local-dev posture) and `PORT` (default `3000`).
 - **Verification:**
-  - `nx run api:serve` boots the server without error.
+  - `nx show projects` → `["api"]`; `nx show project api` → confirms `serve`/`typecheck` targets registered. ✅ (Nx project discovered)
+  - `nx run api:typecheck` → passed after fixing two `TS4111` errors (`process.env.HOST`/`.PORT` needed bracket access under `noPropertyAccessFromIndexSignature`, enabled in Milestone 1). ✅ (TypeScript compilation succeeds)
+  - `nx run api:serve` → logged `Server listening at http://127.0.0.1:3000`; `curl http://127.0.0.1:3000/` → `404` (expected — no routes registered yet, this milestone explicitly excludes routes). ✅ (Fastify server starts without errors)
+  - Sent `SIGINT` to the running server process; process exited on its own (confirmed via `kill -0` finding no process left), no force-kill needed. ✅ (server stops cleanly)
 - **Planned commit message:** `feat(api): add Fastify app skeleton`
-- **Actual commit hash:** _pending_
-- **Deviations:** _none yet_
+- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Deviations:**
+  - Deferred `apps/api/tsconfig.spec.json` to Milestone 6 (when Vitest and the first test files actually arrive) rather than creating an unused placeholder now — this milestone explicitly excludes tests, and an empty spec tsconfig with no consumer would be dead scaffolding until then.
+  - Added a `typecheck` Nx target beyond the single `serve` target originally sketched in the plan, since the milestone's own verification checklist requires confirming "TypeScript compilation succeeds" as a distinct, repeatable check, not just an implicit side effect of `tsx` running.
+  - `pnpm install` required one additional build-script approval (`esbuild`, a transitive dependency of `tsx`, via `pnpm-workspace.yaml`'s `allowBuilds`) — the same supply-chain confirmation mechanism used for `nx` in Milestone 1, not a new project dependency.
+  - `HOST` defaults to `127.0.0.1` rather than `0.0.0.0`; not specified in the plan, chosen as the more conservative "sensible local default" for a service with no auth.
 
 ### Milestone 5 — Add Prisma schema with composite natural key and initial migration
 
