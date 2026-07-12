@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 6 completed.
-- **Milestones completed:** 6 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 7.
+- **Status:** Milestone 7 completed.
+- **Milestones completed:** 7 / 9.
+- **Next action:** awaiting explicit approval to start Milestone 8.
 
 ## Context
 
@@ -257,17 +257,33 @@ model Customer {
 
 ### Milestone 7 — Add idempotent seed script
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** `data/seed-customers.json` can be loaded into Postgres repeatedly without duplication, with unresolved towns degrading safely.
-- **Tasks:**
-  - `apps/api/src/seed/seed.ts` — reads the seed JSON, resolves lat/lon via `geocode.ts`, upserts via the composite `naturalKey`.
-  - Add `seed` Nx target, run as a separate command from the HTTP server (never via an endpoint).
+- **Dependencies added** (`apps/api/package.json`, runtime): `@prisma/adapter-pg@^7.8.0`, `pg@^8.22.0` — the Prisma 7 Postgres driver adapter and its underlying driver, both required for `PrismaClient` to actually connect (Prisma 7 no longer connects from a bare connection string). No `@types/pg` was needed — typecheck passed without it (see Deviations).
+- **Seed parsing and validation approach:** `apps/api/src/seed/seed.ts` reads `data/seed-customers.json` via `node:fs` `readFileSync` (resolved relative to the module's own `import.meta.url`, not `process.cwd()`, so it works regardless of invocation directory), `JSON.parse`s it, then runs a minimal explicit runtime type guard (`isSeedCustomer`) over every array element before any database write — checking `name`/`location.city`/`location.countryCode` are strings and `budget`/`note`, if present, have the right types. A malformed entry throws immediately (fatal, caught by the top-level handler) rather than being silently written.
+- **Prisma Client / adapter setup:** `apps/api/src/prisma-client.ts` exports a singleton `prisma`, constructed via `new PrismaPg({ connectionString: process.env.DATABASE_URL })` passed as `PrismaClient`'s `adapter` option. Not wired into Fastify/`main.ts` — only imported by `seed.ts` this milestone.
+- **Enrichment / geocoding:** for each customer, `geocodeTown(customer.location.city)` (Milestone 6's pure geo module) resolves coordinates. An unknown town is not treated as an error — `geocodeTown` itself logs the warning and returns `null`, and the seed loop stores `lat: null, lon: null` for that row and continues to the next customer without special-casing.
+- **Upsert / idempotency:** `prisma.customer.upsert({ where: { naturalKey: { name, telepules, countryCode } }, create: {...}, update: {...} })` — re-running the seed matches existing rows by the composite key and updates `lat/lon/budget/note` in place rather than inserting duplicates.
+- **Nx target added:** `seed` (`nx:run-commands` wrapping `tsx src/seed/seed.ts`, `cwd: apps/api`) — a separate command from `serve`, never exposed over HTTP.
+- **Error handling / exit behavior:** `main()` runs the full loop; on success, `prisma.$disconnect()` is awaited and the process exits 0 naturally. On any *other* failure (malformed seed data, a real database error, etc.) the top-level `.catch` logs the error clearly via `console.error`, still disconnects Prisma, and calls `process.exit(1)` — a genuine fatal failure is distinguished from the explicitly-tolerated "unknown town" case.
 - **Verification:**
-  - Run the seed twice locally.
-  - Via Postgres MCP: row count is exactly 15 after both runs, no duplicates, sample rows have expected `lat`/`lon`/`countryCode`.
+  - `nx run api:typecheck` → passed (after a required fix, see Deviations). ✅ (API typecheck)
+  - `nx run api:test` → **5 test files passed (5), 16 tests passed (16)**, unaffected by this milestone's changes. ✅ (existing geo unit tests)
+  - **First seed run:** `nx run api:seed` → `seed: upserted 15 customers from .../data/seed-customers.json`, exit code `0`. ✅
+  - **Second seed run:** identical output, exit code `0` — no errors, no crash. ✅
+  - **Native Postgres MCP verification** (`mcp__postgres__execute_sql`), after both runs:
+    - `select count(*) from "Customer"` → `15`. ✅ row count exactly 15
+    - `select name, telepules, "countryCode", count(*) ... group by ... having count(*) > 1` → `[]` (empty). ✅ no duplicate composite natural keys
+    - `select name from "Customer" order by name` → all 15 original seed names present (Anna Kovács, Diego Martín, Elena Popescu, Emma Andersson, Isabella Silva, Jonas Weber, Katarzyna Nowak, Kristofer Nielsen, Lena Fischer, Lucas Dubois, Matej Horvat, Niamh O'Brien, Petra Horáková, Sanne de Vries, Sofia Rossi). ✅
+    - Sample row (`Anna Kovács`) → `telepules: Budapest, countryCode: HU, lat: 47.4979, lon: 19.0402`. ✅ correct telepules/countryCode/lat/lon; ✅ Budapest coordinates match the bundled reference exactly
+    - `select ... where telepules = 'Kraków'` → `Katarzyna Nowak, countryCode: PL, lat: 50.0647, lon: 19.945` — resolved correctly despite the diacritic (stored town name keeps its original accented form; matching happens via the normalized lookup key). ✅
+    - `select count(*) from "Customer" where lat is null or lon is null` → `0`. ✅ no null lat/lon for the current 15-city seed
 - **Planned commit message:** `feat(seed): add idempotent seed script keyed on (name, telepules, countryCode)`
-- **Actual commit hash:** _pending_
-- **Deviations:** _none yet_
+- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Deviations:**
+  - **`apps/api/package.json` now declares `"type": "module"`**: `tsc` rejected `import.meta.url` (used in `seed.ts` to resolve the seed file path independent of `cwd`) with `TS1470`, because without `"type": "module"`, `module: NodeNext` treats files as CommonJS, where `import.meta` isn't legal. The generated Prisma Client itself already relies on `import.meta.url` internally (visible in `apps/api/src/generated/prisma/client.ts`, which is exempted from type-checking via its own `// @ts-nocheck`), confirming this package was always meant to run as ESM under Prisma 7's generator — declaring it explicitly is the correct fix, not a workaround. Re-verified `serve` and `test` targets both still pass after this change.
+  - **`@types/pg` was not added**, despite being anticipated as possibly necessary: `nx run api:typecheck` passed without it. Our own code never imports from `pg` directly (only from `@prisma/adapter-pg`'s `PrismaPg`, which depends on `@types/pg` itself), so no direct type resolution was needed on our side.
+  - No other deviations: no customer routes, endpoint tests, write HTTP endpoints, or database logic were added to `main.ts` (confirmed unchanged via `git diff`).
 
 ### Milestone 8 — Implement customers/count and customers/by-distance endpoints
 
