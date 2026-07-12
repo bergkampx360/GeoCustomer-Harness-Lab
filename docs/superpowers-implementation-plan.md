@@ -249,7 +249,7 @@ model Customer {
   - `grep` over `apps/api/src/geo/*.ts` (excluding specs) for `prisma|fastify|process.env|fs`-style imports → no matches, confirming the module has no Prisma/Postgres/Fastify/env-var/filesystem dependency. ✅
   - `apps/api/src/main.ts` confirmed byte-for-byte unchanged (`git diff` empty); no `seed/` or `routes/` directories exist. ✅
 - **Planned commit message:** `feat(geo): add haversine, normalization, geocode, distance-from-budapest and sort-by-distance with full unit tests`
-- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Actual commit hash:** `c021d44562e84239b7d09c86ac51db5266337b71`
 - **Deviations:**
   - `geo/normalize-town.ts` uses the Unicode property escape `/\p{M}/gu` (matches any combining "Mark" character after NFD decomposition) rather than a hand-written `̀-ͯ` code-point range as originally implied — functionally equivalent and broader/more robust, and avoided an authoring issue where literal combining-mark characters kept being embedded directly in the source instead of an escape sequence.
   - Added `apps/api/tsconfig.spec.json`, deferred from Milestone 4 specifically until test files existed — created now since Vitest and the first spec files arrived this milestone, as anticipated at the time.
