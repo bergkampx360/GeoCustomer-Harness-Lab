@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 2 completed.
-- **Milestones completed:** 2 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 3.
+- **Status:** Milestone 3 completed (live in-session MCP tool verification pending a session restart — see Milestone 3 deviations).
+- **Milestones completed:** 3 / 9.
+- **Next action:** awaiting explicit approval to start Milestone 4.
 
 ## Context
 
@@ -115,15 +115,31 @@ model Customer {
 
 ### Milestone 3 — Configure Postgres MCP for local development
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** Postgres MCP server is configured and reachable against the running (still schema-less) database, before any schema/migration/seed work happens.
+- **Selected MCP server:** [`crystaldba/postgres-mcp`](https://github.com/crystaldba/postgres-mcp) ("Postgres MCP Pro"), run via its official Docker image `crystaldba/postgres-mcp`. Container reported **server version `1.6.0`** (newer than the `0.3.0` on PyPI — the Docker image tracks more current builds). Selected over:
+  - `@modelcontextprotocol/server-postgres` — confirmed **deprecated** on npm and archived on GitHub (`modelcontextprotocol/servers-archived`, `archived: true`); excluded per instruction.
+  - `@ahmetkca/mcp-server-postgres` — single-maintainer npm package, last published 2025-08-08, GitHub repo unreachable via the GitHub API; not a safe pick.
+  - `crystaldba/postgres-mcp`'s own GitHub repo, by contrast, is **not archived**, was pushed 2026-01-22 and updated as recently as 2026-07-12, with 3,045 stars and 66 open issues — a genuinely active project.
 - **Tasks:**
-  - Add a committed, shared `.mcp.json` at repo root defining the Postgres MCP server, using `${DATABASE_URL}` env-var expansion — no literal credentials.
-  - Confirm `DATABASE_URL` in local `.env` matches the docker-compose Postgres instance.
+  - Add a committed, shared `.mcp.json` at repo root defining the Postgres MCP server. ✅ — implemented as `{"mcpServers":{"postgres":{"command":"./scripts/mcp-postgres.sh","args":[]}}}`, no literal credentials.
+  - Confirm `DATABASE_URL` in local `.env` matches the docker-compose Postgres instance. ✅ (`diff .env.example .env` — identical, both point at the compose service).
+- **How `DATABASE_URL` reaches the MCP process:** Claude Code does not auto-load a project's `.env` into `.mcp.json`'s environment, and the container can't resolve host `localhost` directly, so a committed wrapper script (`scripts/mcp-postgres.sh`, contains no secrets) is invoked as the MCP `command`. At launch it: sources the local, git-ignored `.env`; exits with a clear error to stderr if `DATABASE_URL` is unset; rewrites `localhost` → `host.docker.internal` (container-to-host-published-port reachability, standard on Docker Desktop for macOS); and execs `docker run -i --rm -e DATABASE_URI=<rewritten> crystaldba/postgres-mcp --access-mode=restricted`. `--access-mode=restricted` (read-only transactions) was chosen since this milestone's stated MCP purpose is inspection only.
 - **Verification:**
-  - Connect via the Postgres MCP and confirm it reaches the database (e.g., lists an empty schema / no tables yet).
+  - `docker compose ps` confirmed Postgres still healthy from Milestone 2 before configuring MCP. ✅
+  - `scripts/mcp-postgres.sh` tested directly: with `.env` temporarily removed, it fails with a clear stderr message and exit code 1, then `.env` was restored and diffed byte-for-byte against its prior content. ✅
+  - `docker pull crystaldba/postgres-mcp` succeeded. ✅
+  - **Actual MCP verification performed:** since Claude Code loads project `.mcp.json` servers at session start (not hot-reloaded mid-session — see Deviations), live in-session MCP tool calls were not available yet this turn. As a substitute, the exact same containerized server was driven manually over its stdio JSON-RPC protocol (`initialize` → `notifications/initialized` → `tools/call`), reproducing precisely what the Claude Code MCP client would send:
+    - `execute_sql({"sql": "select current_database(), current_user, version();"})` → `current_database: geocustomer`, `current_user: geocustomer`, `PostgreSQL 16.14` — **connection succeeds, database name confirmed**.
+    - `list_schemas({})` → `information_schema`, `pg_catalog`, `pg_toast` (system), `public` (user schema, owner `pg_database_owner`) — **current schema state confirmed**.
+    - `list_objects({"schema_name": "public", "object_type": "table"})` → `[]` — **confirmed no application tables exist yet**.
 - **Planned commit message:** `chore: configure Postgres MCP for local development`
-- **Actual commit hash:** _pending_
+- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Deviations:**
+  - Used the Docker image (`crystaldba/postgres-mcp`) rather than the project's primary-documented `uvx postgres-mcp` invocation, since `uv`/Python MCP tooling isn't installed in this environment and Docker is already a hard project dependency — avoids adding a new toolchain for one dev tool.
+  - Added `scripts/mcp-postgres.sh`, not called out explicitly in the original plan, as the mechanism satisfying "reproducible way for the MCP process to receive DATABASE_URL" without assuming Claude Code auto-loads `.env`.
+  - `.mcp.json` does not use `${DATABASE_URL}` env-var expansion as originally sketched in the plan (Approved Architecture Decisions #6) — Claude Code's own `.mcp.json` variable expansion pulls from the parent process's environment, not from a project `.env` file, so a literal `${DATABASE_URL}` there would have been silently empty. The wrapper script approach was chosen instead and is the more explicit, verifiable mechanism; the underlying goal (no committed secrets, reproducible local wiring) is unchanged.
+  - **Live in-session MCP tool verification could not be performed this turn** — Claude Code loads project-scoped `.mcp.json` servers at session start, and this session was already running when the file was created. The equivalent verification was performed by manually driving the same Docker container over the MCP stdio protocol (see Verification above), which exercises identical code paths (same image, same connection string, same tool implementations) but is not literally "the Claude Code session using its MCP tool." A session restart/reconnect is needed before the `postgres` MCP server's tools appear via the normal in-session tool interface; recommended before relying on it for Milestones 5/7 schema and seed-data inspection.
 - **Deviations:** _none yet_
 
 ### Milestone 4 — Add Fastify app skeleton
