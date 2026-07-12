@@ -279,7 +279,7 @@ model Customer {
     - `select ... where telepules = 'Kraków'` → `Katarzyna Nowak, countryCode: PL, lat: 50.0647, lon: 19.945` — resolved correctly despite the diacritic (stored town name keeps its original accented form; matching happens via the normalized lookup key). ✅
     - `select count(*) from "Customer" where lat is null or lon is null` → `0`. ✅ no null lat/lon for the current 15-city seed
 - **Planned commit message:** `feat(seed): add idempotent seed script keyed on (name, telepules, countryCode)`
-- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Actual commit hash:** `8b86560e47653b88e8fdf734b01c230588f11dd7`
 - **Deviations:**
   - **`apps/api/package.json` now declares `"type": "module"`**: `tsc` rejected `import.meta.url` (used in `seed.ts` to resolve the seed file path independent of `cwd`) with `TS1470`, because without `"type": "module"`, `module: NodeNext` treats files as CommonJS, where `import.meta` isn't legal. The generated Prisma Client itself already relies on `import.meta.url` internally (visible in `apps/api/src/generated/prisma/client.ts`, which is exempted from type-checking via its own `// @ts-nocheck`), confirming this package was always meant to run as ESM under Prisma 7's generator — declaring it explicitly is the correct fix, not a workaround. Re-verified `serve` and `test` targets both still pass after this change.
   - **`@types/pg` was not added**, despite being anticipated as possibly necessary: `nx run api:typecheck` passed without it. Our own code never imports from `pg` directly (only from `@prisma/adapter-pg`'s `PrismaPg`, which depends on `@types/pg` itself), so no direct type resolution was needed on our side.
