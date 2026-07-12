@@ -165,7 +165,7 @@ model Customer {
   - `nx run api:serve` → logged `Server listening at http://127.0.0.1:3000`; `curl http://127.0.0.1:3000/` → `404` (expected — no routes registered yet, this milestone explicitly excludes routes). ✅ (Fastify server starts without errors)
   - Sent `SIGINT` to the running server process; process exited on its own (confirmed via `kill -0` finding no process left), no force-kill needed. ✅ (server stops cleanly)
 - **Planned commit message:** `feat(api): add Fastify app skeleton`
-- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Actual commit hash:** `fbdf38d11cddda4ea192c8f0c4787877480ba130`
 - **Deviations:**
   - Deferred `apps/api/tsconfig.spec.json` to Milestone 6 (when Vitest and the first test files actually arrive) rather than creating an unused placeholder now — this milestone explicitly excludes tests, and an empty spec tsconfig with no consumer would be dead scaffolding until then.
   - Added a `typecheck` Nx target beyond the single `serve` target originally sketched in the plan, since the milestone's own verification checklist requires confirming "TypeScript compilation succeeds" as a distinct, repeatable check, not just an implicit side effect of `tsx` running.
