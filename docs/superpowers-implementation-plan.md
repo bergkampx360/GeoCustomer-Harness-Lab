@@ -108,7 +108,7 @@ model Customer {
   - `docker compose ps` shows the service `Up ... (healthy)` on `0.0.0.0:5432->5432/tcp`. ✅
   - `.env` confirmed git-ignored via `git check-ignore -v .env`; `.env.example` confirmed untracked-but-not-ignored. ✅
 - **Planned commit message:** `chore: add docker-compose postgres and env templates`
-- **Actual commit hash:** `_recorded after commit — see report_`
+- **Actual commit hash:** `d6648a792fb64e741fc923d07ea4bb9559421d22`
 - **Deviations:**
   - Added a named Docker volume (`postgres-data`) for data persistence across container restarts. Not explicitly requested in the plan, but standard for a local Postgres dev instance and not disallowed by the technical constraints (which only rule out cloud/orchestration infrastructure, not a local volume).
   - `POSTGRES_PORT` was added as its own env var (defaulting to `5432`) separately from `DATABASE_URL`, so the compose file's host port mapping and Prisma's future connection string both derive from the same configurable value without duplicating a hardcoded port in two places.
