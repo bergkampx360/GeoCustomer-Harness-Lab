@@ -4,8 +4,13 @@
     "defaultBase": "main"
   },
   "namedInputs": {
-    "default": ["{projectRoot}/**/*"],
-    "production": ["default"]
+    "default": [
+      "{projectRoot}/**/*"
+    ],
+    "production": [
+      "default"
+    ]
   },
-  "targetDefaults": {}
+  "targetDefaults": {},
+  "analytics": false
 }
