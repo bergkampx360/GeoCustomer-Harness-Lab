@@ -346,7 +346,7 @@ model Customer {
 - **Verification:**
   - Follow the README from a clean checkout (fresh `docker compose up`, migrate, seed, serve, test) and confirm every step works as documented. ✅ — see clean-checkout steps above.
 - **Planned commit message:** `docs: add README and finalize env example`
-- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Actual commit hash:** `4b68450c4e55b2cc4a0b181e43be63676266d188`
 - **Deviations:**
   - No new application features or dependencies were added (`pnpm-lock.yaml` confirmed untouched by the clean reinstall).
   - No other deviations — the README structure follows exactly the sections requested (prerequisites, ordered setup/run steps, Nx command table, design notes, MCP setup, verification checklist).
