@@ -2,9 +2,9 @@
 
 ## Progress Summary
 
-- **Status:** Milestone 8 completed.
-- **Milestones completed:** 8 / 9.
-- **Next action:** awaiting explicit approval to start Milestone 9.
+- **Status:** All milestones completed. Plan closed.
+- **Milestones completed:** 9 / 9.
+- **Next action:** none — implementation complete. Verified end-to-end via a full clean-checkout run (see Milestone 9).
 
 ## Context
 
@@ -324,13 +324,29 @@ model Customer {
 
 ### Milestone 9 — Add README and finalize env example
 
-- **Status:** Pending
+- **Status:** Completed
 - **Goal:** A newcomer can run the whole project end-to-end from README instructions alone.
 - **Tasks:**
-  - `README.md`: Postgres start (docker compose) → MCP setup → migration → seed → server start → tests.
-  - Finalize `.env.example` to match all env vars actually used.
+  - `README.md`: prerequisites, full setup/run order, Nx command reference, design notes, Postgres MCP setup, verification checklist. ✅
+  - Finalize `.env.example` to match all env vars actually used (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `DATABASE_URL`, `HOST`, `PORT` — confirmed via `grep -rn "process.env\[" apps/api/src` plus `docker-compose.yml`'s own `${VAR}` references; `HOST`/`PORT` were missing before this milestone and have been added). ✅
+- **Finalized environment variables:** `POSTGRES_USER=geocustomer`, `POSTGRES_PASSWORD=geocustomer`, `POSTGRES_DB=geocustomer`, `POSTGRES_PORT=5432`, `DATABASE_URL=postgresql://geocustomer:geocustomer@localhost:5432/geocustomer`, `HOST=127.0.0.1`, `PORT=3000`.
+- **Clean-checkout verification steps performed** (followed the README exactly, step by step):
+  1. `docker compose down -v` (stopped and removed the existing DB + volume).
+  2. Removed `node_modules` (root and `apps/api`) and `apps/api/src/generated`; `pnpm install --frozen-lockfile` — reinstalled strictly from the committed lockfile, no lockfile drift.
+  3. `rm .env && cp .env.example .env` — recreated local env from the finalized example.
+  4. `docker compose up -d`, then polled `docker inspect --format='{{.State.Health.Status}}'` → `healthy` on the first check.
+  5. `nx run api:prisma-generate` → Prisma Client regenerated cleanly.
+  6. `nx run api:migrate-dev` → applied the existing committed `20260712195509_init` migration with **no new migration created and no interactive prompt** — confirming the README's claim that a fresh checkout just applies what's already committed.
+  7. `nx run api:seed` run twice → both `seed: upserted 15 customers from .../data/seed-customers.json`, exit code `0` both times; `data/seed-customers.json` untouched throughout.
+  8. Native Postgres MCP `mcp__postgres__execute_sql("select count(*) from \"Customer\"")` → `15` (one transient "terminating connection due to administrator command" retry needed immediately after the container recreation — the same known, already-documented behavior from Milestone 5/7, not a new issue).
+  9. `nx run api:typecheck` → passed. `nx run api:test` → **6 test files, 19 tests, all passing.**
+  10. `nx run api:serve` → booted; `curl /customers/count` → `{"count":15}`; `curl /customers/by-distance` → 15 customers, first is Anna Kovács/Budapest at `distanceKm: 0`, distances strictly non-decreasing end-to-end, every value rounded to exactly one decimal, zero nulls.
+  11. `SIGINT` → log shows `"received SIGINT, shutting down"`, process exited cleanly (confirmed via `kill -0`).
+- **README corrections made during verification:** none — every documented step matched actual behavior exactly on the first attempt (including the migrate-dev "no prompt on fresh checkout" claim, which was verified rather than assumed).
 - **Verification:**
-  - Follow the README from a clean checkout (fresh `docker compose up`, migrate, seed, serve, test) and confirm every step works as documented.
+  - Follow the README from a clean checkout (fresh `docker compose up`, migrate, seed, serve, test) and confirm every step works as documented. ✅ — see clean-checkout steps above.
 - **Planned commit message:** `docs: add README and finalize env example`
-- **Actual commit hash:** _pending_
-- **Deviations:** _none yet_
+- **Actual commit hash:** `_recorded in follow-up documentation commit — see report_`
+- **Deviations:**
+  - No new application features or dependencies were added (`pnpm-lock.yaml` confirmed untouched by the clean reinstall).
+  - No other deviations — the README structure follows exactly the sections requested (prerequisites, ordered setup/run steps, Nx command table, design notes, MCP setup, verification checklist).
