@@ -73,8 +73,8 @@ graph LR
 ### AD-7 — Haversine and sorting boundary
 
 - **Binds:** CAP-2
-- **Prevents:** Distance/sorting logic duplicated or reimplemented differently between the route handler and its tests, or coupled to Fastify/Prisma types so it can't be unit tested without a database.
-- **Rule:** `src/domain/distance.ts` exports pure `haversineKm(a, b)`. `src/domain/sort.ts` exports pure `sortByDistance(customers)` implementing null-last-with-name-tiebreak. Neither module imports Fastify or Prisma types. The route handler is the only caller wiring them to real data.
+- **Prevents:** Distance/sorting logic duplicated or reimplemented differently between the route handler and its tests; coupling to Fastify/Prisma types so it can't be unit tested without a database; and sorting being implemented against the rounded `distanceKm` value instead of raw distance, which would silently misorder customers whose rounded values coincide but whose raw distances differ.
+- **Rule:** `src/domain/distance.ts` exports pure `haversineKm(a, b)`, returning the raw, unrounded distance. `src/domain/sort.ts` exports pure `sortByDistance(customers)`, sorting by each customer's **raw** `haversineKm` result — never a rounded value — with null-last placement and a name tie-break applied only when two raw distances are exactly equal. Rounding to one decimal for the `distanceKm` response field happens separately, after sorting, in the route handler, and never feeds back into the sort key. Neither `distance.ts` nor `sort.ts` imports Fastify or Prisma types. The route handler is the only caller wiring them to real data.
 
 ### AD-8 — Vitest placement and categories
 
@@ -105,7 +105,7 @@ graph LR
 | Concern | Convention |
 | --- | --- |
 | Naming | camelCase for TS identifiers; Prisma model `Customer` (PascalCase) `@@map`-ed to table `customers`; field names (`telepules`, `lat`, `lon`, `countryCode`) match SPEC.md verbatim — not translated or renamed. |
-| Data & formats | `distanceKm` is a JS `number`, rounded via `Math.round(x * 10) / 10`, `null` when unresolved (never the string `"null"`). `Customer.id`: `Int @default(autoincrement())` — never exposed as a stable external identifier, so its format carries no cross-unit risk. Error shape: Fastify's default error envelope; no custom problem-details layer. |
+| Data & formats | `distanceKm` is a JS `number`, computed from the raw Haversine distance (also the sort key — see AD-7) and rounded via `Math.round(x * 10) / 10` only for the response; `null` when unresolved (never the string `"null"`). `Customer.id`: `Int @default(autoincrement())` — never exposed as a stable external identifier, so its format carries no cross-unit risk. Error shape: Fastify's default error envelope; no custom problem-details layer. |
 | State & cross-cutting | Configuration via environment variables only (no config files/CLI flags). Logging via Fastify's built-in `pino` logger — no separate logging library. No auth middleware exists at all, not even a stub, per Non-goals. |
 
 ## Stack

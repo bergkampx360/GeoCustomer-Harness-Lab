@@ -31,7 +31,7 @@ Functional requirements, expressed as capabilities:
 
 - **CAP-2**
   - **intent:** A client can retrieve all customers ordered by ascending distance from Budapest via `GET /customers/by-distance`, each annotated with its distance.
-  - **success:** Every item includes `distanceKm` rounded to one decimal. Budapest-located customers appear first, each with `distanceKm: 0`. Customers with unresolved coordinates appear last, each with `distanceKm: null`. Ties are broken by ascending `name`. See `api-contract.md` for the full contract and `data-and-seed.md` for how distance is calculated.
+  - **success:** Sorting is by each customer's raw, unrounded Haversine distance; `distanceKm` in the response is that same raw distance rounded to one decimal, for display only. Budapest-located customers appear first, each with `distanceKm: 0`. Customers with unresolved coordinates appear after every customer with a calculable distance, each with `distanceKm: null`. Ties are broken by ascending `name`, applied only when two customers' raw distances are exactly equal. See `api-contract.md` for the full contract and `data-and-seed.md` for how distance is calculated.
 
 - **CAP-3**
   - **intent:** The system can idempotently load the fixed seed file and offline-geocode each customer's settlement to `lat`/`lon` using a bundled local reference, with no external network calls.
@@ -56,7 +56,7 @@ No frontend, no authentication or authorization, no CRUD endpoints beyond the tw
 
 ## Success signal
 
-Following the README end to end — starting Postgres via Docker Compose, running the migration, running the seed command twice, starting the server, and running the test suite — produces: no duplicate rows after the second seed run; `GET /customers/count` returning the exact row count; `GET /customers/by-distance` returning all customers ascending by `distanceKm` with Budapest customers first at `0`, unresolved-location customers last with `null`, ties broken by `name`; and passing Haversine unit tests covering the Budapest–Vienna case (~214 km), the zero-distance case, and the null-coordinate case.
+Following the README end to end — starting Postgres via Docker Compose, running the migration, running the seed command twice, starting the server, and running the test suite — produces: no duplicate rows after the second seed run; `GET /customers/count` returning the exact row count; `GET /customers/by-distance` returning all customers ascending by raw distance (displayed as `distanceKm`, rounded to one decimal) with Budapest customers first at `0`, unresolved-location customers last with `null`, ties broken by `name` only when raw distances are exactly equal; and passing Haversine unit tests covering the Budapest–Vienna case (~214 km), the zero-distance case, and the null-coordinate case.
 
 ## Assumptions
 

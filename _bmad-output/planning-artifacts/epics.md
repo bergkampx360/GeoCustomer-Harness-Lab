@@ -233,17 +233,21 @@ So that I get all customers ranked by how close they are to Budapest.
 
 **Given** seeded customers with resolved coordinates
 **When** `GET /customers/by-distance` is called
-**Then** all customers are returned ascending by `distanceKm`, each rounded to one decimal (FR2)
+**Then** all customers are returned ascending by their **raw, unrounded** Haversine distance, with `distanceKm` in the response rounded to one decimal for display only (FR2)
+
+**Given** two customers whose raw distances differ but round to the same `distanceKm`
+**When** `GET /customers/by-distance` is called
+**Then** they still appear in raw-distance order, not reordered by name — proving the sort key is the raw distance, not the rounded display value (resolves readiness finding M-1)
 
 **Given** a Budapest customer
 **When** returned
-**Then** `distanceKm` is `0` and it appears first
+**Then** its raw distance is `0`, `distanceKm` is `0`, and it appears first
 
 **Given** a customer with unresolved coordinates
 **When** returned
-**Then** it appears last with `distanceKm: null`
+**Then** it appears after every customer with a calculable distance, with `distanceKm: null`
 
-**Given** two customers with equal distance
+**Given** two customers with exactly equal **raw** distance
 **When** returned
 **Then** they are ordered by `name` ascending
 
@@ -251,15 +255,15 @@ So that I get all customers ranked by how close they are to Budapest.
 **When** unit tested directly, with no Fastify instance and no Prisma client involved
 **Then** it returns ≈214 km for Budapest–Vienna, `0` for Budapest-to-itself, and handles a null-coordinate input without throwing (NFR4, AD-7, AD-8)
 
-**Objective:** Expose the second required endpoint (CAP-2 / FR2) using pure, independently-unit-tested Haversine and sorting logic.
+**Objective:** Expose the second required endpoint (CAP-2 / FR2) using pure, independently-unit-tested Haversine and sorting logic that sorts by raw distance and rounds only for display (resolves readiness finding M-1).
 
-**Scope:** `src/domain/distance.ts` (`haversineKm`, pure); `src/domain/sort.ts` (`sortByDistance`, pure, null-last + name-tiebreak); route handler wiring them to Prisma-sourced data; `distance.spec.ts` and `sort.spec.ts` covering the three mandatory cases.
+**Scope:** `src/domain/distance.ts` (`haversineKm`, pure, returns the raw unrounded distance); `src/domain/sort.ts` (`sortByDistance`, pure, sorts by each customer's raw `haversineKm` result, null-last + name-tiebreak applied only on exact raw-distance equality); the route handler rounds each result to one decimal for the `distanceKm` field only after sorting; `distance.spec.ts` and `sort.spec.ts` covering the three mandatory cases plus a raw-vs-rounded ordering case.
 
 **Dependencies:** Stories 1.2–1.4 (client, seeded data, app boundary already wired).
 
 **Explicit exclusions:** No caching layer. No PostGIS or DB-side geospatial functions. No external geocoding at request time. No additional HTTP methods on this path.
 
-**Validation commands / evidence expected:** `pnpm vitest run src/domain` — passes with no live database required; `curl http://localhost:<port>/customers/by-distance` against seeded data, manually verifying ordering, null placement, and rounding.
+**Validation commands / evidence expected:** `pnpm vitest run src/domain` — passes with no live database required, including a case with two customers whose rounded `distanceKm` values coincide but raw distances differ, to prove sort-before-round ordering (resolves M-1); `curl http://localhost:<port>/customers/by-distance` against seeded data, manually verifying ordering, null placement, and rounding.
 
 ---
 
