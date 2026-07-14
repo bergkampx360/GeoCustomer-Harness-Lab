@@ -1,0 +1,168 @@
+# generated: 2026-07-13
+# last_updated: 2026-07-13
+# project: GeoCustomer-Harness-Lab
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epics.md (not started)
+#   - ready-for-dev: Individual story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for code review
+#   - done: Story completed (passed every Definition of Done gate below)
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Source of truth for scope: _bmad-output/planning-artifacts/epics.md (Epic 1, Stories 1.1-1.7, approved).
+# - Approved dependency order is 1.1 -> 1.2 -> 1.3 -> 1.4 -> 1.5 -> 1.6 -> 1.7 (see `stories:` below);
+#   this file does not split, merge, rename, reorder, or broaden any story from that approval.
+# - Single-track sequential work: no assignee/owner field, no team-capacity or parallel-assignment
+#   concept is used -- one story is worked at a time, in the approved order.
+# - No hour/day/story-point/date estimates are recorded, by design.
+# - Epic transitions to 'in-progress' when the first story starts; 'done' only when all 7 stories are 'done'.
+
+generated: 2026-07-13
+last_updated: 2026-07-13
+project: GeoCustomer-Harness-Lab
+project_key: NOKEY
+tracking_system: file-system
+story_location: "_bmad-output/implementation-artifacts"
+
+development_status:
+  epic-1: backlog
+  1-1-workspace-and-postgresql-foundation: backlog
+  1-2-prisma-schema-migration-and-database-lifecycle: backlog
+  1-3-idempotent-seed-with-offline-location-resolution: backlog
+  1-4-count-endpoint: backlog
+  1-5-by-distance-endpoint-with-haversine-and-deterministic-sorting: backlog
+  1-6-postgresql-mcp-integration-and-verification: backlog
+  1-7-documentation-and-clean-checkout-validation: backlog
+  epic-1-retrospective: optional
+
+# Definition of Done -- every story must satisfy all four before moving to 'done',
+# in addition to its own story-specific verification_gate below.
+definition_of_done:
+  - implementation_validation: "The story's acceptance criteria, exactly as written in epics.md, are verified against the running implementation."
+  - tests_or_evidence: "Required automated tests pass, and/or the story's specified manual evidence (e.g. an MCP transcript, a clean-checkout log) is recorded."
+  - code_review: "The story has passed code review before being considered complete."
+  - focused_commit: "The story lands as its own small, focused commit -- not bundled with other stories' changes."
+
+# Implementation tracking: identifier, title, status, dependency, order, and verification
+# gate for each of the seven approved stories. This section is additive to development_status
+# above (which remains the canonical status field per the standard schema); it carries the
+# extra fields requested for sprint tracking and introduces no new story, no split/merge, and
+# no reordering relative to epics.md.
+stories:
+  - id: "1.1"
+    key: 1-1-workspace-and-postgresql-foundation
+    title: "Workspace and PostgreSQL Foundation"
+    status: backlog
+    depends_on: []
+    implementation_order: 1
+    verification_gate: >
+      pnpm install succeeds; docker compose up -d starts a postgres:16-alpine
+      container and docker compose ps shows it healthy; exactly one Nx project
+      (api) exists; pnpm exec tsc --noEmit succeeds against the workspace
+      skeleton. Plus every item in definition_of_done.
+
+  - id: "1.2"
+    key: 1-2-prisma-schema-migration-and-database-lifecycle
+    title: "Prisma Schema, Migration, and Database Lifecycle"
+    status: backlog
+    depends_on: ["1.1"]
+    implementation_order: 2
+    verification_gate: >
+      prisma migrate dev creates a customers table matching SPEC.md's data
+      model, including the @@unique([name, telepules, countryCode])
+      constraint; src/db/client.ts is confirmed a single shared PrismaClient
+      singleton across two import sites; sending SIGINT/SIGTERM to the running
+      server exits cleanly with Prisma disconnected and no leaked connection.
+      Plus every item in definition_of_done.
+
+  - id: "1.3"
+    key: 1-3-idempotent-seed-with-offline-location-resolution
+    title: "Idempotent Seed with Offline Location Resolution"
+    status: backlog
+    depends_on: ["1.2"]
+    implementation_order: 3
+    verification_gate: >
+      Running the seed command twice leaves exactly 15 customer rows, no
+      duplicates; settlement matching is accent-independent, case-independent,
+      and whitespace-trimmed; Budapest (and optionally its districts) resolves
+      to the capital; a settlement absent from the bundled reference yields
+      null lat/lon, is logged, and does not crash or stop remaining rows; the
+      seed is reachable only via its own dedicated command, never through the
+      HTTP server. Plus every item in definition_of_done.
+
+  - id: "1.4"
+    key: 1-4-count-endpoint
+    title: "Count Endpoint"
+    status: backlog
+    depends_on: ["1.2", "1.3"]
+    implementation_order: 4
+    verification_gate: >
+      GET /customers/count returns {"count": 15} against seeded data and still
+      matches exactly after re-seeding; no method other than GET is registered
+      on this path. Plus every item in definition_of_done.
+
+  - id: "1.5"
+    key: 1-5-by-distance-endpoint-with-haversine-and-deterministic-sorting
+    title: "By-Distance Endpoint with Haversine and Deterministic Sorting"
+    status: backlog
+    depends_on: ["1.2", "1.3", "1.4"]
+    implementation_order: 5
+    verification_gate: >
+      Sorting is by the raw, unrounded Haversine distance -- never by the
+      rounded value; distanceKm in the response is that same raw distance
+      rounded to exactly one decimal place, for display only; the name
+      tie-break applies only when two customers' raw distances are exactly
+      equal; customers with unresolved coordinates are placed last, after
+      every customer with a calculable distance. haversineKm and
+      sortByDistance unit tests pass with no live database required,
+      including a case with two customers whose rounded distanceKm values
+      coincide but whose raw distances differ, proving sort-before-round
+      ordering (readiness finding M-1, resolved). Plus every item in
+      definition_of_done.
+
+  - id: "1.6"
+    key: 1-6-postgresql-mcp-integration-and-verification
+    title: "PostgreSQL MCP Integration and Verification"
+    status: backlog
+    depends_on: ["1.2", "1.3"]
+    implementation_order: 6
+    verification_gate: >
+      The project-scoped .mcp.json (reading DATABASE_URL from the environment,
+      no inlined connection string or secret) connects successfully on a
+      fresh clone after only the documented .env setup. Recorded evidence
+      (a transcript or log excerpt) demonstrates the MCP actively used to
+      inspect: the database schema, the customers table definition, the
+      seeded row count, and sample seeded customer rows -- configuring the
+      MCP without this recorded evidence does not satisfy this gate. Plus
+      every item in definition_of_done.
+
+  - id: "1.7"
+    key: 1-7-documentation-and-clean-checkout-validation
+    title: "Documentation and Clean-Checkout Validation"
+    status: backlog
+    depends_on: ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"]
+    implementation_order: 7
+    verification_gate: >
+      A literal clean-checkout/fresh-clone dry run -- following only the
+      README, with no other guidance -- completes end to end: Postgres
+      starts, the migration applies, the seed runs idempotently, the server
+      starts, both endpoints respond correctly, and pnpm vitest run passes.
+      The README does not instruct committing the real .env file, and no
+      secrets or real .env file are present in this branch's git history.
+      Plus every item in definition_of_done.
