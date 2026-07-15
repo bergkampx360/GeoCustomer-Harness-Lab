@@ -43,7 +43,7 @@ story_location: "_bmad-output/implementation-artifacts"
 development_status:
   epic-1: in-progress
   1-1-workspace-and-postgresql-foundation: done
-  1-2-prisma-schema-migration-and-database-lifecycle: backlog
+  1-2-prisma-schema-migration-and-database-lifecycle: ready-for-dev
   1-3-idempotent-seed-with-offline-location-resolution: backlog
   1-4-count-endpoint: backlog
   1-5-by-distance-endpoint-with-haversine-and-deterministic-sorting: backlog
@@ -80,7 +80,7 @@ stories:
   - id: "1.2"
     key: 1-2-prisma-schema-migration-and-database-lifecycle
     title: "Prisma Schema, Migration, and Database Lifecycle"
-    status: backlog
+    status: ready-for-dev
     depends_on: ["1.1"]
     implementation_order: 2
     verification_gate: >
