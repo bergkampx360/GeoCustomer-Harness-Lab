@@ -9,3 +9,12 @@ _bmad/config.user.toml
 
 # OS files
 .DS_Store
+
+# Node / pnpm / Nx (Story 1.1: workspace and PostgreSQL foundation)
+node_modules
+dist
+tmp
+out-tsc
+.nx/cache
+.nx/workspace-data
+.nx/migrate-runs
