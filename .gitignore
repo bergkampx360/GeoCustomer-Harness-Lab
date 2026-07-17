@@ -18,3 +18,6 @@ out-tsc
 .nx/cache
 .nx/workspace-data
 .nx/migrate-runs
+
+# Prisma (Story 1.2: reproducible generated client, regenerate via `prisma generate`)
+apps/api/src/generated/
