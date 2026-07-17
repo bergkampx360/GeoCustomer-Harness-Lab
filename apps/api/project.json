@@ -95,6 +95,13 @@
           "buildTarget": "api:build:production"
         }
       }
+    },
+    "seed": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx apps/api/src/seed.ts",
+        "cwd": "{workspaceRoot}"
+      }
     }
   },
   "tags": []

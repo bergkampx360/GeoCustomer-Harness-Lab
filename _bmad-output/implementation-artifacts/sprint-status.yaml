@@ -44,7 +44,7 @@ development_status:
   epic-1: in-progress
   1-1-workspace-and-postgresql-foundation: done
   1-2-prisma-schema-migration-and-database-lifecycle: done
-  1-3-idempotent-seed-with-offline-location-resolution: ready-for-dev
+  1-3-idempotent-seed-with-offline-location-resolution: done
   1-4-count-endpoint: backlog
   1-5-by-distance-endpoint-with-haversine-and-deterministic-sorting: backlog
   1-6-postgresql-mcp-integration-and-verification: backlog
@@ -94,7 +94,7 @@ stories:
   - id: "1.3"
     key: 1-3-idempotent-seed-with-offline-location-resolution
     title: "Idempotent Seed with Offline Location Resolution"
-    status: ready-for-dev
+    status: done
     depends_on: ["1.2"]
     implementation_order: 3
     verification_gate: >
