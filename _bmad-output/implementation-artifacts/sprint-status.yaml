@@ -34,7 +34,7 @@
 # - Epic transitions to 'in-progress' when the first story starts; 'done' only when all 7 stories are 'done'.
 
 generated: 2026-07-13
-last_updated: 2026-07-17
+last_updated: 2026-07-18
 project: GeoCustomer-Harness-Lab
 project_key: NOKEY
 tracking_system: file-system
@@ -45,7 +45,7 @@ development_status:
   1-1-workspace-and-postgresql-foundation: done
   1-2-prisma-schema-migration-and-database-lifecycle: done
   1-3-idempotent-seed-with-offline-location-resolution: done
-  1-4-count-endpoint: ready-for-dev
+  1-4-count-endpoint: done
   1-5-by-distance-endpoint-with-haversine-and-deterministic-sorting: backlog
   1-6-postgresql-mcp-integration-and-verification: backlog
   1-7-documentation-and-clean-checkout-validation: backlog
@@ -109,7 +109,7 @@ stories:
   - id: "1.4"
     key: 1-4-count-endpoint
     title: "Count Endpoint"
-    status: ready-for-dev
+    status: done
     depends_on: ["1.2", "1.3"]
     implementation_order: 4
     verification_gate: >
