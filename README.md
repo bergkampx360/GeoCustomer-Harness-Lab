@@ -1,96 +1,156 @@
-# App
+# GeoCustomer Harness Lab
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A small, offline REST service over PostgreSQL that exposes the seeded customer
+list's total count and its ranking by distance from Budapest. Built with
+Fastify, Prisma, and PostgreSQL in a single-project Nx/pnpm monorepo
+(`apps/api`). No frontend, no authentication, no external network calls at
+runtime.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+For the full design record (architecture spine, specification, epics), see
+`_bmad-output/planning-artifacts/`.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## Prerequisites
 
-## Run tasks
+- Node.js `>=24 <25` (see `package.json` → `engines`)
+- pnpm
+- Docker (with Docker Compose v2 — the `docker compose` subcommand)
+- Optional, only if you want to use the PostgreSQL MCP tool locally: `uv`/`uvx`
+  (Python), used to run `postgres-mcp` per the committed `.mcp.json`
 
-To run tasks with Nx use:
+## Setup and run sequence
 
-```sh
-npx nx <target> <project-name>
-```
+Run these steps in order from the repository root.
 
-For example:
-
-```sh
-npx nx build myproject
-```
-
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-To install a new plugin you can use the `nx add` command. Here's an example of adding the React plugin:
-```sh
-npx nx add @nx/react
-```
-
-Use the plugin's generator to create new projects. For example, to create a new React app or library:
+### 1. Clone and enter the repository
 
 ```sh
-# Generate an app
-npx nx g @nx/react:app demo
-
-# Generate a library
-npx nx g @nx/react:lib some-lib
+git clone https://github.com/bergkampx360/GeoCustomer-Harness-Lab.git
+cd GeoCustomer-Harness-Lab
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+### 2. Configure environment variables
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
+Copy the placeholder template to `.env` and adjust values only if needed
+(the defaults work out of the box):
 
 ```sh
-npx nx connect
+cp .env.example .env
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+`.env` is git-ignored and must never be committed. Only `.env.example`
+(placeholder values only) is tracked in git.
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
+### 3. Install dependencies
 
 ```sh
-npx nx g ci-workflow
+pnpm install
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+This also runs `prisma generate` automatically via the `postinstall` script.
 
-## Install Nx Console
+### 4. Start PostgreSQL
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+```sh
+docker compose up -d
+```
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Starts a single `postgres:16-alpine` container (service `postgres` in
+`docker-compose.yml`), using the credentials and port from `.env`. Data
+persists in the named volume `postgres-data` across restarts. Confirm it's
+healthy with:
 
-## Useful links
+```sh
+docker compose ps
+```
 
-Learn more:
+### 5. Apply the database migration
 
-- [Learn more about this workspace setup](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+```sh
+pnpm exec prisma migrate deploy --schema apps/api/prisma/schema.prisma
+```
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+This applies the already-committed migration
+(`apps/api/prisma/migrations/20260716160812_init`) to create the `customers`
+table. **Always use `prisma migrate deploy` here, never `prisma migrate
+dev`** — `migrate deploy` only applies existing, committed migrations and
+never creates or modifies one; `migrate dev` is a development-time authoring
+command that can generate new migration files and is not part of this
+run sequence.
+
+### 6. Run the seed
+
+```sh
+npx nx run api:seed
+```
+
+Loads `data/seed-customers.json` (15 customers), offline-geocodes each
+settlement against a bundled reference, and upserts the rows. The seed is
+idempotent — running it again leaves exactly the same 15 rows, no
+duplicates.
+
+### 7. Start the API server
+
+```sh
+npx nx run api:serve
+```
+
+Starts the Fastify server on `http://localhost:3000`. Leave this running in
+its own terminal; use `Ctrl+C` to stop it (the server disconnects Prisma
+cleanly on `SIGINT`/`SIGTERM`).
+
+### 8. Verify the endpoints
+
+In another terminal:
+
+```sh
+curl http://localhost:3000/customers/count
+```
+
+Expected: `{"count":15}`
+
+```sh
+curl http://localhost:3000/customers/by-distance
+```
+
+Expected: a JSON array of all 15 customers, ascending by distance from
+Budapest. Each item has a `distanceKm` field (a number rounded to one
+decimal, or `null` if the customer's settlement could not be resolved).
+Budapest customers appear first with `distanceKm: 0`; unresolved-location
+customers appear last with `distanceKm: null`.
+
+### 9. Run the tests
+
+```sh
+pnpm exec vitest run
+```
+
+Runs the full test suite (pure domain/geo unit tests plus the Fastify route
+tests), with no live database required.
+
+## Optional: PostgreSQL MCP
+
+This repository includes a project-scoped `.mcp.json` that launches
+`postgres-mcp` (via `uvx postgres-mcp --access-mode=restricted`, read-only)
+and reads `DATABASE_URL` from your environment — no connection string is
+inlined in the file. If your MCP client (e.g. Claude Code) supports
+project-scoped MCP servers, it picks this up automatically once `.env` is
+populated and `docker compose up -d` is running; no further setup is
+required. To smoke-test it manually instead:
+
+```sh
+uvx postgres-mcp --access-mode=restricted
+```
+
+## Shutdown and cleanup
+
+Stop the API server with `Ctrl+C` in its terminal, then stop the database:
+
+```sh
+docker compose down
+```
+
+This stops and removes the `postgres` container but **preserves the named
+volume** (`postgres-data`), so your seeded data is still there next time you
+run `docker compose up -d`. To also delete the volume (and all seeded data
+with it), run `docker compose down -v` instead — only do this if you
+intentionally want a fully clean database on the next start.
