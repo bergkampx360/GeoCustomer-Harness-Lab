@@ -5,7 +5,7 @@ export interface Coordinates {
   lon: number;
 }
 
-const BUDAPEST: Coordinates = { lat: 47.4979, lon: 19.0402 };
+export const BUDAPEST: Coordinates = { lat: 47.4979, lon: 19.0402 };
 
 const ROMAN_NUMERALS_I_TO_XXIII = [
   'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X',
